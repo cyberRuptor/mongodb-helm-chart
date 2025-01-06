@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ .Release.Name }}-rplca
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mongoDB.labels.app }}
+spec:
+  serviceName: {{ .Release.Name }}-service
+  replicas: {{ .Values.mongoDB.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.mongoDB.labels.app }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.mongoDB.labels.app }}
+    spec:
+
+      containers:
+        - name: {{ .Values.mongoDB.containers.name }}
+          image: {{ .Values.mongoDB.containers.image }}:{{ .Values.mongoDB.containers.tag }}
+          {{- if .Values.mongoDB.containers.command }}
+          command: {{ .Values.mongoDB.containers.command | toYaml | nindent 10 }}
+          {{- end }}
+          ports:
+          - containerPort: {{ .Values.mongoDB.containers.ports.containerPort }}
+          imagePullPolicy: {{ .Values.mongoDB.containers.ports.imagePullPolicy }}
+          env:
+          - name: MONGO_INITDB_ROOT_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-secret
+                key: mongo-root-username
+          - name: MONGO_INITDB_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-secret
+                key: mongo-root-password
+          - name: MONGO_INITDB_DATABASE
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-secret
+                key: mongo-database
+          - name: MONGO_INITDB_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-secret
+                key: mongo-username
+          - name: MONGO_INITDB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Release.Name }}-secret
+                key: mongo-password
+          volumeMounts:
+          - mountPath: {{ .Values.mongoDB.containers.volumeMounts.dataMountPath }}
+            name: {{ .Release.Name }}-pvc
+          - mountPath: {{ .Values.mongoDB.containers.volumeMounts.configMountPath }}
+            name: {{ .Values.mongoDB.volumes.name }}
+      serviceAccountName: {{ .Values.namespace  }}-sa
+      volumes:
+      - name: {{ .Values.mongoDB.volumes.name }}
+        configMap:
+          name: {{ .Release.Name }}-config
+  volumeClaimTemplates:
+  - metadata:
+      name: {{ .Release.Name }}-pvc
+    spec:
+      accessModes: {{ .Values.mongoDB.volumeClaimTemplates.accessModes }}
+      resources:
+        requests:
+          storage: {{ .Values.mongoDB.volumeClaimTemplates.resources.requests.storage }}
