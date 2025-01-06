@@ -1,0 +1,80 @@
+namespace: mongodb
+serviceAccount:
+  imagePullSecrets:
+    name1: docker-registry-pull-secret
+
+mongoDB:
+  rplsetName: rset
+  replicas: 3
+  labels:
+    app: mongodb
+  containers:
+    name: mongodb
+    image: mongo
+    tag: "6.0.1"
+    command: ["mongod", "--replSet=rset", "--bind_ip_all"]
+    ports:
+      containerPort: 27017
+    imagePullPolicy: Always
+
+    volumeMounts:
+       dataMountPath: /data/db
+       configMountPath: /data/configdb
+
+  volumes:
+    name: mongodb-config
+
+  volumeClaimTemplates:
+    accessModes: ["ReadWriteMany"]
+    resources:
+      requests:
+        storage: 5Gi
+
+  secret:
+    type: opaque
+    data:
+      mongoRootUsername: "YWRtaW4="       #base64 encoded secrets
+      mongoRootPassword: "YWRtaW4="
+      mongoDatabase: "aWFtLXRvb2w="
+      mongoUsername: "bW9uZ28tZGktZGV2"
+      mongoPassword: "bW9uZ29kYg=="
+
+  service:
+    ports:
+      port: 27017
+      targetPort: 27017
+      name: http
+      protocol: TCP
+    type: Headless   ##set it as LoadBalancer or ClusterIP if you need to create clusterIP service or to use load balancer for external connectivity.
+    loadBalancerIP:
+    clusterIP:
+
+  config:
+    mongodbConfig: |
+      storage:
+        dbPath: /data/db
+      net:
+        bindIp: 0.0.0.0
+        port: 27017
+      systemLog:
+        destination: file
+        path: /var/log/mongodb/mongod.log
+      replication:
+        replSetName: rset
+
+jobs:
+  init:
+    containersName: mongo-init
+    command: ["sh", "-c", "cp /scripts/init-replicaset.sh /tmp/init-replicaset.sh && chmod +x /tmp/init-replicaset.sh && /tmp/init-replicaset.sh"]
+    volumeMounts:
+      name: init-script
+      mountPath: /scripts/init-replicaset.sh
+      subPath: init-replicaset.sh
+  scale:
+    containersName: mongodb-scale
+    restartPolicy: Never
+    command: ["sh", "-c", "cp /scripts/mongo-scale.sh /tmp/mongo-scale.sh && chmod +x /tmp/mongo-scale.sh && /tmp/mongo-scale.sh"]
+    volumeMounts:
+      name: scale-script
+      mountPath: /scripts/mongo-scale.sh
+      subPath: mongo-scale.sh
