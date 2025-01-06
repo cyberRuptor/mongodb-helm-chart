@@ -1,0 +1,87 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-scale-job-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mongoDB.labels.app }}
+data:
+  mongo-scale.sh: |
+    #!/bin/bash
+
+    REPLICA_COUNT={{ .Values.mongoDB.replicas }}
+    REPLICA_SET_NAME={{ .Values.mongoDB.rplsetName }}
+    SERVICE_DOMAIN={{ .Release.Name }}-service
+    POD_NAMES=$(mongosh --host "mongo-rplca-0.${SERVICE_DOMAIN}" --quiet --eval "rs.status()" | grep 'name' | sed "s/'//g" | awk -F ':' '{print $2}')
+    RUNNING_RPLCA_COUNT=$(mongosh --host "mongo-rplca-0.${SERVICE_DOMAIN}" --quiet --eval "rs.status()" | grep 'name' | wc -l)
+    echo "${RUNNING_RPLCA_COUNT}"
+
+    if (( RUNNING_RPLCA_COUNT < REPLICA_COUNT )); then
+      echo "checkpoint 1"
+      count_to_be_increased=$(( REPLICA_COUNT - RUNNING_RPLCA_COUNT ))
+      echo "Increasing replica set members by $count_to_be_increased"
+      for (( i=0; i<count_to_be_increased; i++ )); do
+        member_to_add="mongo-rplca-$((RUNNING_RPLCA_COUNT + i))"
+        echo "Adding member: $member_to_add"
+        mongosh --host "mongo-rplca-0.${SERVICE_DOMAIN}" --quiet --eval "rs.add('$member_to_add.${SERVICE_DOMAIN}');"
+        if [[ $? -ne 0 ]]; then
+          echo "Error adding member $member_to_add. Exiting."
+          exit 1
+        fi
+      done
+    elif (( RUNNING_RPLCA_COUNT > REPLICA_COUNT )); then
+      echo "checkpoint 2"
+      count_to_be_decreased=$(( RUNNING_RPLCA_COUNT - REPLICA_COUNT ))
+      echo "Decreasing replica set members by $count_to_be_decreased"
+      for (( i=1; i<=count_to_be_decreased; i++ )); do
+        member_to_remove="mongo-rplca-$((RUNNING_RPLCA_COUNT - i))"
+        echo "Removing member: $member_to_remove"
+        mongosh --host "mongo-rplca-0.${SERVICE_DOMAIN}" --quiet --eval "rs.remove('$member_to_remove.${SERVICE_DOMAIN}:27017');"
+        if [[ $? -ne 0 ]]; then
+          echo "Error removing member $member_to_remove. Exiting."
+          exit 1
+        fi
+      done
+    else
+      echo "checkpoint 3"
+      echo "Replica set members are already in sync."
+    fi
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-init-job-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mongoDB.labels.app }}
+data:
+  init-replicaset.sh: |
+    #!/bin/sh
+    sleep 2m
+    REPLICA_COUNT={{ .Values.mongoDB.replicas }}
+    REPLICA_SET_NAME={{ .Values.mongoDB.rplsetName }}
+    SERVICE_DOMAIN={{ .Release.Name }}-service
+
+    echo "Initializing a $REPLICA_COUNT-node MongoDB Replica Set: $REPLICA_SET_NAME..."
+
+    CONFIG="{ _id: '$REPLICA_SET_NAME', members: ["
+    for i in $(seq 0 $((REPLICA_COUNT - 1))); do
+      HOST="mongo-rplca-$i.${SERVICE_DOMAIN}"
+      CONFIG="$CONFIG{ _id: $i, host: '$HOST' },"
+    done
+    CONFIG="${CONFIG%,} ] }"  # Remove trailing comma and close array
+
+    echo "Replica Set Configuration: $CONFIG"
+    PRIMARY_POD="mongo-rplca-0.${SERVICE_DOMAIN}"
+
+    echo "Connecting to primary pod: $PRIMARY_POD"
+    mongosh --host $PRIMARY_POD --eval "
+    rs.initiate($CONFIG);
+    print('Replica Set Initialized Successfully');
+    "
+    mongosh --host $PRIMARY_POD --eval "rs.status();"
+
+    echo "MongoDB Replica Set Initialization Completed."
