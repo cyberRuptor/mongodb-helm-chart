@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-service
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mongoDB.labels.app }}
+spec:
+  ports:
+    - port: {{ .Values.mongoDB.service.ports.port }}
+      targetPort: {{ .Values.mongoDB.service.ports.targetPort }}
+      name: {{ .Values.mongoDB.service.ports.name }}
+      protocol: {{ .Values.mongoDB.service.ports.Protocol }}
+  selector:
+    app: {{ .Values.mongoDB.labels.app }}
+  {{- if eq .Values.mongoDB.service.type "Headless" }}
+  clusterIP: None
+  {{- else if eq .Values.mongoDB.service.type "LoadBalancer" }}
+  type: {{ .Values.mongoDB.service.type }}
+  loadBalancerIP: {{ .Values.mongoDB.service.loadBalancerIP }}
+  {{- else }}
+  clusterIP:
+  {{- end }}
