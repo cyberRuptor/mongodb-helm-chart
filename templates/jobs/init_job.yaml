@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-init-job
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Values.mongoDB.labels.app }}
+spec:
+  template:
+    spec:
+      containers:
+      - name: {{ .Values.jobs.init.containersName }}
+        image: {{ .Values.mongoDB.containers.image }}:{{ .Values.mongoDB.containers.tag }}
+        {{- if .Values.jobs.init.command }}
+        command: {{ .Values.jobs.init.command | toYaml | nindent 10 }}
+        {{- end }}
+        env:
+        - name: HOME
+          value: "/tmp"
+
+        volumeMounts:
+        - name: {{ .Values.jobs.init.volumeMounts.name }}
+          mountPath: {{ .Values.jobs.init.volumeMounts.mountPath }}
+          subPath: {{ .Values.jobs.init.volumeMounts.subPath }}
+      restartPolicy: Never
+      volumes:
+      - name: {{ .Values.jobs.init.volumeMounts.name }}
+        configMap:
+          name: {{ .Release.Name }}-init-job-config
