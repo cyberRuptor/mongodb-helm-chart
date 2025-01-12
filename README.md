@@ -91,7 +91,7 @@ Before you begin, ensure you have the following:
    <br>
    -> **scale-job :-** It does not execute during the installation of the helm chart. It only runs when you upgrade the helm chart for a specific value, which is the replica count.
    <br>
-   When you have to scale up/down the pods of Mongodb then you have to just change the number of replica counts inside the values.yaml <br>
+                       When you have to scale up/down the pods of Mongodb then you have to just change the number of replica counts inside the values.yaml <br>
    
    ```sh
    mongoDB:
@@ -99,11 +99,12 @@ Before you begin, ensure you have the following:
      replicas: 3
    ```
    <br>
-   Then run the upgrade command.<br>
+                       Then run the upgrade command.<br>
    
    ```sh
      helm upgarde mongodb mongodb-helm-chart
    ```
+   <br>
    If you make the changes only in replicas value in values.yaml then only scale-job will run otherwise helm will not run the job.
 
 
