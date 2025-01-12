@@ -87,9 +87,9 @@ Before you begin, ensure you have the following:
 
    It has two type of jobs:-<br>
    
-   -> **init-job :-** it runs only when you install the helm chart. It initializes the replicaset within the Mongo pod.
+   -> **init-job :-** it runs only when you install the helm chart. It initializes the replicaset within the Mongo pod.<br>
    <br>
-   -> **scale-job :-** It does not execute during the installation of the helm chart. It only runs when you upgrade the helm chart for a specific value, which is the replica count.
+   -> **scale-job :-** It does not execute during the installation of the helm chart. It only runs when you upgrade the helm chart for a specific value, which is the replica count.<br>
    <br>
                        When you have to scale up/down the pods of Mongodb then you have to just change the number of replica counts inside the values.yaml <br>
    
