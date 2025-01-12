@@ -11,29 +11,29 @@ Deploying MongoDB on Kubernetes with replication provides a scalable, highly ava
 
 1. **MongoDB Replica Set:**
 
-  -> A replica set consists of multiple MongoDB instances, ensuring high availability and data redundancy.
+    -> A replica set consists of multiple MongoDB instances, ensuring high availability and data redundancy.
 
-  -> Automatic failover: A secondary node is promoted to the primary if the primary node becomes unavailable.
+    -> Automatic failover: A secondary node is promoted to the primary if the primary node becomes unavailable.
 
 2. **Kubernetes Orchestration:**
 
-  -> Uses StatefulSets for managing MongoDB pods with stable network identities.
+    -> Uses StatefulSets for managing MongoDB pods with stable network identities.
 
-  -> PersistentVolumeClaims (PVCs) ensure durable storage for database data.
+    -> PersistentVolumeClaims (PVCs) ensure durable storage for database data.
 
 3. **Scalability:**
 
-  -> Scale the replica set by adjusting the replica count in the values.yaml.
+    -> Scale the replica set by adjusting the replica count in the values.yaml.
 
-  -> Additional nodes automatically join the replica set when scaled.
+    -> Additional nodes automatically join the replica set when scaled.
 
 4. **Security:**
 
-  -> Secret management using Kubernetes Secrets for sensitive data like passwords.
+    -> Secret management using Kubernetes Secrets for sensitive data like passwords.
 
 5. **Automation:**
 
-  -> Configuration scripts in Job containers handle the initialization of the MongoDB replica set.
+    -> Configuration scripts in Job containers handle the initialization of the MongoDB replica set.
 
 ## Prerequisites
 
@@ -91,20 +91,23 @@ Before you begin, ensure you have the following:
    <br>
    -> **scale-job :-** It does not execute during the installation of the helm chart. It only runs when you upgrade the helm chart for a specific value, which is the replica count.
    <br>
-                       When you have to scale up/down the pods of Mongodb then you have to just change the number of replica counts inside the values.yaml
-                       ```sh
-                           mongoDB:
-                             rplsetName: rset
-                             replicas: 3
-                       ```
-                       Then run the upgrade command.
-                       ```sh
-                           helm upgarde mongodb mongodb-helm-chart
-                       ```
-                       If you make the changes only in replicas value in values.yaml then only scale-job will run otherwise helm will not run the job.
-
-
+   When you have to scale up/down the pods of Mongodb then you have to just change the number of replica counts inside the values.yaml <br>
+   
+   ```sh
+   mongoDB:
+     rplsetName: rset
+     replicas: 3
+   ```
    <br>
+   Then run the upgrade command.<br>
+   
+   ```sh
+     helm upgarde mongodb mongodb-helm-chart
+   ```
+   If you make the changes only in replicas value in values.yaml then only scale-job will run otherwise helm will not run the job.
+
+
+<br>
 <br>
 <br>
 
